@@ -15,3 +15,9 @@ The idea is to provide a general framework for building feature extractors with 
 - [TIML - Task Informed Meta Learning](https://openreview.net/pdf?id=de0KufElojN)
 - [Multimodal contrastive learning for remote sensing tasks](https://arxiv.org/pdf/2209.02329.pdf)
 - [SSL Cookbook](https://arxiv.org/pdf/2304.12210.pdf)
+- [Scale-MAE](https://arxiv.org/pdf/2212.14532.pdf)
+- [SatMAE](https://arxiv.org/pdf/2207.08051.pdf)
+- [Pushing the Limits of Simple Pipelines for Few-Shot Learning:
+External Data and Fine-Tuning Make a Difference](https://arxiv.org/pdf/2204.07305v1.pdf)
+- [Meta-Dataset](https://arxiv.org/pdf/1903.03096.pdf)
+- [TIML](https://openreview.net/pdf?id=de0KufElojN)
