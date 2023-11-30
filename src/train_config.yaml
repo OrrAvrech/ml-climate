@@ -1,0 +1,14 @@
+dataset:
+  root_dir: "/Users/orrav/Documents/Data/ml-climate/EuroSAT/EuroSAT_RGB"
+  shot: 1
+  test_way: 5
+  test_shot: 1
+  test_query: 30
+  train_query: 15
+  train_way: 30
+
+model:
+  name: "google/vit-base-patch16-224-in21k"
+
+protonet_train:
+  epochs: 250

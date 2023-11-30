@@ -4,3 +4,7 @@ PyYAML
 black
 learn2learn
 pyrallis
+transformers
+torch
+torchvision
+torchaudio

@@ -9,6 +9,8 @@ from torch.utils.data import DataLoader
 import learn2learn as l2l
 from learn2learn.data.transforms import NWays, KShots, LoadData, RemapLabels
 from train_config import TrainConfig
+from data.datasets import EuroSAT
+from models.vit import ViTPreTrained
 
 
 def pairwise_distances_logits(a, b):
@@ -84,19 +86,12 @@ def main(cfg: TrainConfig):
         device = torch.device("cuda")
     print(device)
 
-    model = Convnet()
+    model = ViTPreTrained(cfg.model.name)
     model.to(device)
 
-    path_data = "~/data"
-    train_dataset = l2l.vision.datasets.MiniImagenet(
-        root=path_data, mode="train", download=True
-    )
-    valid_dataset = l2l.vision.datasets.MiniImagenet(
-        root=path_data, mode="validation", download=True
-    )
-    test_dataset = l2l.vision.datasets.MiniImagenet(
-        root=path_data, mode="test", download=True
-    )
+    train_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="train")
+    valid_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="validation")
+    test_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="test")
 
     train_dataset = l2l.data.MetaDataset(train_dataset)
     train_transforms = [

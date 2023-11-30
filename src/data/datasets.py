@@ -1,13 +1,25 @@
+import random
 from pathlib import Path
 from torch.utils.data import Dataset
 from torchvision.io import read_image
+from typing import Optional
+
+
+random.seed(42)
 
 
 class BaseImageDataset(Dataset):
-    def __init__(self, root_dir: Path, transform=None):
+    def __init__(
+        self, root_dir: Path, classes: Optional[list] = None, transform: Optional = None
+    ):
         self.root_dir = root_dir
         self.transform = transform
-        self.classes = sorted([d.name for d in self.root_dir.iterdir() if d.is_dir()])
+        if classes is None:
+            self.classes = sorted(
+                [d.name for d in self.root_dir.iterdir() if d.is_dir()]
+            )
+        else:
+            self.classes = classes
         self.class_to_idx = {cls_name: i for i, cls_name in enumerate(self.classes)}
         self.images = self._load_images()
 
@@ -32,16 +44,44 @@ class BaseImageDataset(Dataset):
         return image, label
 
 
-class EuroSAT(BaseImageDataset):
+class BaseImageDatasetSplit(BaseImageDataset):
+    TRAIN_SPLIT = 0.7
+
+    def __init__(self, split: str, root_dir: Path, transform: Optional = None):
+        train_split, val_split, test_split = split_classes(root_dir, self.TRAIN_SPLIT)
+        cls_splits = {"train": train_split, "validation": val_split, "test": test_split}
+        if split in cls_splits.keys():
+            super().__init__(
+                root_dir=root_dir, classes=cls_splits[split], transform=transform
+            )
+        else:
+            raise ValueError("Splits needs to be train, test or validation")
+
+
+class EuroSAT(BaseImageDatasetSplit):
     # EuroSAT MS
     pass
 
 
-class Merced(BaseImageDataset):
+class Merced(BaseImageDatasetSplit):
     # UC Merced Land Use
     pass
 
 
-class FMoW(BaseImageDataset):
+class FMoW(BaseImageDatasetSplit):
     # Functional Map of the World (fMoW)
     pass
+
+
+def split_classes(root_dir: Path, train_split: float):
+    test_split = (1 - train_split) / 2
+    classes = sorted([d.name for d in root_dir.iterdir() if d.is_dir()])
+    num_cls = len(classes)
+    train_num_cls = int(train_split * num_cls)
+    test_num_cls = int(test_split * num_cls)
+
+    train_cls_split = random.sample(classes, train_num_cls)
+    remaining_list = [elem for elem in classes if elem not in train_cls_split]
+    test_cls_split = random.sample(remaining_list, test_num_cls)
+    val_cls_split = [elem for elem in remaining_list if elem not in test_cls_split]
+    return train_cls_split, val_cls_split, test_cls_split

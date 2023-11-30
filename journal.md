@@ -16,3 +16,11 @@ class labels paired with remote sensing data.
 ### 11.17.2023
 - Implemented BaseImageDataset and initial ProtoNet training script.
 - Currently experimenting with these 3 datasets: [EuroSAT](https://arxiv.org/pdf/1709.00029.pdf), [UC Merced Land Use](https://faculty.ucmerced.edu/snewsam/papers/Yang_ACMGIS10_BagOfVisualWords.pdf), [fMoW](https://arxiv.org/pdf/1711.07846.pdf).
+
+### 11.29.2023
+- Implemented dataset splits according to the common Few-shot scheme.
+- Decided on using pre-trained models + K-NN on test and validation episodes at first. Second, fine-tune on meta-test only.
+
+### 11.30.2023
+- Implemented pre-trained models as baselines.
+- Read the [fMoW](https://arxiv.org/pdf/1711.07846.pdf) paper, thinking about GSD and multi-spectral augmentations, but still TBD.
