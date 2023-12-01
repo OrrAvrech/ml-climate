@@ -1,10 +1,10 @@
 import pyrallis
 import numpy as np
+from typing import Optional
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 
 import learn2learn as l2l
 from learn2learn.data.transforms import NWays, KShots, LoadData, RemapLabels
@@ -25,21 +25,6 @@ def pairwise_distances_logits(a, b):
 def accuracy(predictions, targets):
     predictions = predictions.argmax(dim=1).view(targets.shape)
     return (predictions == targets).sum().float() / targets.size(0)
-
-
-class Convnet(nn.Module):
-    def __init__(self, x_dim=3, hid_dim=64, z_dim=64):
-        super().__init__()
-        self.encoder = l2l.vision.models.CNN4Backbone(
-            hidden_size=hid_dim,
-            channels=x_dim,
-            max_pool=True,
-        )
-        self.out_channels = 1600
-
-    def forward(self, x):
-        x = self.encoder(x)
-        return x.view(x.size(0), -1)
 
 
 def fast_adapt(model, batch, ways, shot, query_num, metric=None, device=None):
@@ -76,6 +61,31 @@ def fast_adapt(model, batch, ways, shot, query_num, metric=None, device=None):
     return loss, acc
 
 
+def get_data_loader(
+    dataset: Dataset,
+    meta: bool,
+    num_tasks: int = 1,
+    shuffle: bool = True,
+    way: Optional[int] = None,
+    shot: Optional[int] = None,
+    query: Optional[int] = None,
+    batch_size: Optional[int] = None,
+):
+    if meta is True:
+        ds = l2l.data.MetaDataset(dataset)
+        transforms = [
+            NWays(ds, way),
+            KShots(ds, query + shot),
+            LoadData(ds),
+            RemapLabels(ds),
+        ]
+        tasks = l2l.data.Taskset(ds, task_transforms=transforms, num_tasks=num_tasks)
+        data_loader = DataLoader(tasks, shuffle=shuffle)
+    else:
+        data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+    return data_loader
+
+
 @pyrallis.wrap()
 def main(cfg: TrainConfig):
     loss_ctr = 0
@@ -90,110 +100,99 @@ def main(cfg: TrainConfig):
     model.to(device)
 
     train_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="train")
-    valid_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="validation")
+    val_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="validation")
     test_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="test")
 
-    train_dataset = l2l.data.MetaDataset(train_dataset)
-    train_transforms = [
-        NWays(train_dataset, cfg.dataset.train_way),
-        KShots(train_dataset, cfg.dataset.train_query + cfg.dataset.shot),
-        LoadData(train_dataset),
-        RemapLabels(train_dataset),
-    ]
-    train_tasks = l2l.data.Taskset(train_dataset, task_transforms=train_transforms)
-    train_loader = DataLoader(train_tasks, shuffle=True)
-
-    valid_dataset = l2l.data.MetaDataset(valid_dataset)
-    valid_transforms = [
-        NWays(valid_dataset, cfg.dataset.test_way),
-        KShots(valid_dataset, cfg.dataset.test_query + cfg.dataset.test_shot),
-        LoadData(valid_dataset),
-        RemapLabels(valid_dataset),
-    ]
-    valid_tasks = l2l.data.Taskset(
-        valid_dataset,
-        task_transforms=valid_transforms,
-        num_tasks=200,
+    train_loader = get_data_loader(
+        train_dataset,
+        meta=cfg.training.meta,
+        way=cfg.dataset.train_way,
+        shot=cfg.dataset.shot,
+        query=cfg.dataset.train_query,
     )
-    valid_loader = DataLoader(valid_tasks, shuffle=True)
 
-    test_dataset = l2l.data.MetaDataset(test_dataset)
-    test_transforms = [
-        NWays(test_dataset, cfg.dataset.test_way),
-        KShots(test_dataset, cfg.dataset.test_query + cfg.dataset.test_shot),
-        LoadData(test_dataset),
-        RemapLabels(test_dataset),
-    ]
-    test_tasks = l2l.data.Taskset(
+    val_loader = get_data_loader(
+        val_dataset,
+        meta=True,
+        num_tasks=cfg.dataset.test_tasks,
+        way=cfg.dataset.test_way,
+        shot=cfg.dataset.test_shot,
+        query=cfg.dataset.test_query,
+    )
+
+    test_loader = get_data_loader(
         test_dataset,
-        task_transforms=test_transforms,
-        num_tasks=2000,
+        meta=True,
+        num_tasks=cfg.dataset.test_tasks,
+        way=cfg.dataset.test_way,
+        shot=cfg.dataset.test_shot,
+        query=cfg.dataset.test_query,
     )
-    test_loader = DataLoader(test_tasks, shuffle=True)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+    if cfg.model.train:
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 
-    for epoch in range(1, cfg.protonet_train.epochs + 1):
-        model.train()
+        for epoch in range(1, cfg.training.epochs + 1):
+            model.train()
 
-        loss_ctr = 0
-        n_loss = 0
-        n_acc = 0
+            loss_ctr = 0
+            n_loss = 0
+            n_acc = 0
 
-        for i in range(100):
-            batch = next(iter(train_loader))
+            for i in range(100):
+                batch = next(iter(train_loader))
 
-            loss, acc = fast_adapt(
-                model,
-                batch,
-                cfg.dataset.train_way,
-                cfg.dataset.shot,
-                cfg.dataset.train_query,
-                metric=pairwise_distances_logits,
-                device=device,
+                loss, acc = fast_adapt(
+                    model,
+                    batch,
+                    cfg.dataset.train_way,
+                    cfg.dataset.shot,
+                    cfg.dataset.train_query,
+                    metric=pairwise_distances_logits,
+                    device=device,
+                )
+
+                loss_ctr += 1
+                n_loss += loss.item()
+                n_acc += acc
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            lr_scheduler.step()
+
+            print(
+                "epoch {}, train, loss={:.4f} acc={:.4f}".format(
+                    epoch, n_loss / loss_ctr, n_acc / loss_ctr
+                )
             )
 
-            loss_ctr += 1
-            n_loss += loss.item()
-            n_acc += acc
+            model.eval()
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-        lr_scheduler.step()
+            loss_ctr = 0
+            n_loss = 0
+            n_acc = 0
+            for i, batch in enumerate(val_loader):
+                loss, acc = fast_adapt(
+                    model,
+                    batch,
+                    cfg.dataset.test_way,
+                    cfg.dataset.test_shot,
+                    cfg.dataset.test_query,
+                    metric=pairwise_distances_logits,
+                    device=device,
+                )
 
-        print(
-            "epoch {}, train, loss={:.4f} acc={:.4f}".format(
-                epoch, n_loss / loss_ctr, n_acc / loss_ctr
+                loss_ctr += 1
+                n_loss += loss.item()
+                n_acc += acc
+
+            print(
+                "epoch {}, val, loss={:.4f} acc={:.4f}".format(
+                    epoch, n_loss / loss_ctr, n_acc / loss_ctr
+                )
             )
-        )
-
-        model.eval()
-
-        loss_ctr = 0
-        n_loss = 0
-        n_acc = 0
-        for i, batch in enumerate(valid_loader):
-            loss, acc = fast_adapt(
-                model,
-                batch,
-                cfg.dataset.test_way,
-                cfg.dataset.test_shot,
-                cfg.dataset.test_query,
-                metric=pairwise_distances_logits,
-                device=device,
-            )
-
-            loss_ctr += 1
-            n_loss += loss.item()
-            n_acc += acc
-
-        print(
-            "epoch {}, val, loss={:.4f} acc={:.4f}".format(
-                epoch, n_loss / loss_ctr, n_acc / loss_ctr
-            )
-        )
 
     for i, batch in enumerate(test_loader, 1):
         loss, acc = fast_adapt(

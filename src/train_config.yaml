@@ -6,9 +6,13 @@ dataset:
   test_query: 30
   train_query: 15
   train_way: 30
+  test_tasks: 600
 
 model:
   name: "google/vit-base-patch16-224-in21k"
+  train: false
 
-protonet_train:
+training:
+  meta: false
   epochs: 250
+  batch_size: 32
