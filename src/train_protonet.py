@@ -12,6 +12,8 @@ from train_config import TrainConfig
 from data.datasets import OPTIMAL31
 from models.vit import ViTPreTrained
 
+from transformers import ViTModel, AutoImageProcessor
+
 
 def pairwise_distances_logits(a, b):
     n = a.shape[0]
@@ -33,8 +35,6 @@ def fast_adapt(model, batch, ways, shot, query_num, metric=None, device=None):
     if device is None:
         device = model.device()
     data, labels = batch
-    data = data.to(device)
-    labels = labels.to(device)
 
     # Sort data samples by labels
     sort = torch.sort(labels)
@@ -42,6 +42,8 @@ def fast_adapt(model, batch, ways, shot, query_num, metric=None, device=None):
     labels = labels.squeeze(0)[sort.indices].squeeze(0)
 
     # Compute support and query embeddings
+    data = data.to(device)
+    labels = labels.to(device)
     embeddings = model(data)
     support_indices = np.zeros(data.size(0), dtype=bool)
     selection = np.arange(ways) * (shot + query_num)
@@ -95,8 +97,10 @@ def main(cfg: TrainConfig):
         device = torch.device("cuda")
     print(device)
 
-    model = ViTPreTrained(cfg.model.name)
-    model.to(device)
+    model = ViTPreTrained(cfg.model.name, device=device)
+    # processor = AutoImageProcessor.from_pretrained(cfg.model.name)
+    # model = ViTModel.from_pretrained(cfg.model.name)
+    model = model.to(device)
 
     train_dataset = OPTIMAL31(root_dir=cfg.dataset.root_dir, split="train")
     val_dataset = OPTIMAL31(root_dir=cfg.dataset.root_dir, split="validation")

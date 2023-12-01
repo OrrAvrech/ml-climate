@@ -24,3 +24,6 @@ class labels paired with remote sensing data.
 ### 11.30.2023
 - Implemented pre-trained models as baselines.
 - Read the [fMoW](https://arxiv.org/pdf/1711.07846.pdf) paper, thinking about GSD and multi-spectral augmentations, but still TBD.
+
+### 12.1.2023
+- Started running experiments, currently without meta-training, only examining backbones and pre-training regimes on FS evaluation conventions. Refer to `etc/experiments.md`.
