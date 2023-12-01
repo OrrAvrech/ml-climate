@@ -1,5 +1,5 @@
 import torch
-from transformers import ViTFeatureExtractor, AutoImageProcessor
+from transformers import ViTModel, AutoImageProcessor
 
 
 class ViTPreTrained(torch.nn.Module):
@@ -10,6 +10,7 @@ class ViTPreTrained(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         inputs = self.processor(x, return_tensors="pt")
-        model = ViTFeatureExtractor.from_pretrained(self.name)
+        model = ViTModel.from_pretrained(self.name)
         outputs = model(**inputs)
-        return outputs
+        embedding = outputs.pooler_output
+        return embedding

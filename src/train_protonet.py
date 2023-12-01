@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, Dataset
 import learn2learn as l2l
 from learn2learn.data.transforms import NWays, KShots, LoadData, RemapLabels
 from train_config import TrainConfig
-from data.datasets import EuroSAT
+from data.datasets import OPTIMAL31
 from models.vit import ViTPreTrained
 
 
@@ -35,7 +35,6 @@ def fast_adapt(model, batch, ways, shot, query_num, metric=None, device=None):
     data, labels = batch
     data = data.to(device)
     labels = labels.to(device)
-    n_items = shot * ways
 
     # Sort data samples by labels
     sort = torch.sort(labels)
@@ -99,9 +98,9 @@ def main(cfg: TrainConfig):
     model = ViTPreTrained(cfg.model.name)
     model.to(device)
 
-    train_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="train")
-    val_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="validation")
-    test_dataset = EuroSAT(root_dir=cfg.dataset.root_dir, split="test")
+    train_dataset = OPTIMAL31(root_dir=cfg.dataset.root_dir, split="train")
+    val_dataset = OPTIMAL31(root_dir=cfg.dataset.root_dir, split="validation")
+    test_dataset = OPTIMAL31(root_dir=cfg.dataset.root_dir, split="test")
 
     train_loader = get_data_loader(
         train_dataset,

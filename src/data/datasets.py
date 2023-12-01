@@ -28,7 +28,7 @@ class BaseImageDataset(Dataset):
         for cls_name in self.classes:
             class_dir = self.root_dir / cls_name
             for img_path in class_dir.iterdir():
-                images.append((img_path, self.class_to_idx[cls_name]))
+                images.append((str(img_path), self.class_to_idx[cls_name]))
         return images
 
     def __len__(self):
@@ -59,17 +59,12 @@ class BaseImageDatasetSplit(BaseImageDataset):
 
 
 class EuroSAT(BaseImageDatasetSplit):
-    # EuroSAT MS
+    # EuroSAT RGB
     pass
 
 
-class Merced(BaseImageDatasetSplit):
-    # UC Merced Land Use
-    pass
-
-
-class FMoW(BaseImageDatasetSplit):
-    # Functional Map of the World (fMoW)
+class OPTIMAL31(BaseImageDatasetSplit):
+    # OPTIMAL-31 General Scenes
     pass
 
 
@@ -78,10 +73,10 @@ def split_classes(root_dir: Path, train_split: float):
     classes = sorted([d.name for d in root_dir.iterdir() if d.is_dir()])
     num_cls = len(classes)
     train_num_cls = int(train_split * num_cls)
-    test_num_cls = int(test_split * num_cls)
+    val_num_cls = int(test_split * num_cls)
 
     train_cls_split = random.sample(classes, train_num_cls)
     remaining_list = [elem for elem in classes if elem not in train_cls_split]
-    test_cls_split = random.sample(remaining_list, test_num_cls)
-    val_cls_split = [elem for elem in remaining_list if elem not in test_cls_split]
+    val_cls_split = random.sample(remaining_list, val_num_cls)
+    test_cls_split = [elem for elem in remaining_list if elem not in val_cls_split]
     return train_cls_split, val_cls_split, test_cls_split
