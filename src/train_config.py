@@ -11,6 +11,7 @@ class Dataset:
     test_query: int
     train_query: int
     train_way: int
+    train_tasks: int
     test_tasks: int
 
 
@@ -25,6 +26,8 @@ class Training:
     meta: bool
     epochs: int
     batch_size: int
+    lr: float
+    min_lr: float
 
 
 @dataclass

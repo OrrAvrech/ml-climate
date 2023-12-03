@@ -10,7 +10,7 @@ import learn2learn as l2l
 from learn2learn.data.transforms import NWays, KShots, LoadData, RemapLabels
 from train_config import TrainConfig
 from data.datasets import OPTIMAL31
-from models.vit import ViTPreTrained
+from models.vit import BasePreTrained
 
 from transformers import ViTModel, AutoImageProcessor
 
@@ -42,8 +42,6 @@ def fast_adapt(model, batch, ways, shot, query_num, metric=None, device=None):
     labels = labels.squeeze(0)[sort.indices].squeeze(0)
 
     # Compute support and query embeddings
-    data = data.to(device)
-    labels = labels.to(device)
     embeddings = model(data)
     support_indices = np.zeros(data.size(0), dtype=bool)
     selection = np.arange(ways) * (shot + query_num)
@@ -97,10 +95,7 @@ def main(cfg: TrainConfig):
         device = torch.device("cuda")
     print(device)
 
-    model = ViTPreTrained(cfg.model.name, device=device)
-    # processor = AutoImageProcessor.from_pretrained(cfg.model.name)
-    # model = ViTModel.from_pretrained(cfg.model.name)
-    model = model.to(device)
+    model = BasePreTrained(cfg.model.name, device=device)
 
     train_dataset = OPTIMAL31(root_dir=cfg.dataset.root_dir, split="train")
     val_dataset = OPTIMAL31(root_dir=cfg.dataset.root_dir, split="validation")
@@ -133,17 +128,16 @@ def main(cfg: TrainConfig):
     )
 
     if cfg.model.train:
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-        lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+        optimizer = torch.optim.Adam(model.parameters(), lr=cfg.training.lr)
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=cfg.dataset.train_tasks, eta_min=cfg.training.min_lr
+        )
 
         for epoch in range(1, cfg.training.epochs + 1):
             model.train()
 
-            loss_ctr = 0
-            n_loss = 0
-            n_acc = 0
-
-            for i in range(100):
+            loss_ctr, n_loss, n_acc = 0, 0, 0
+            for i in range(cfg.dataset.train_tasks):
                 batch = next(iter(train_loader))
 
                 loss, acc = fast_adapt(
@@ -166,16 +160,12 @@ def main(cfg: TrainConfig):
             lr_scheduler.step()
 
             print(
-                "epoch {}, train, loss={:.4f} acc={:.4f}".format(
-                    epoch, n_loss / loss_ctr, n_acc / loss_ctr
-                )
+                f"epoch {epoch}, train, loss={n_loss / loss_ctr:.4f} acc={n_acc / loss_ctr:.4f}"
             )
 
             model.eval()
 
-            loss_ctr = 0
-            n_loss = 0
-            n_acc = 0
+            loss_ctr, n_loss, n_acc = 0, 0, 0
             for i, batch in enumerate(val_loader):
                 loss, acc = fast_adapt(
                     model,
@@ -192,9 +182,7 @@ def main(cfg: TrainConfig):
                 n_acc += acc
 
             print(
-                "epoch {}, val, loss={:.4f} acc={:.4f}".format(
-                    epoch, n_loss / loss_ctr, n_acc / loss_ctr
-                )
+                f"epoch {epoch}, val, loss={n_loss / loss_ctr:.4f} acc={n_acc / loss_ctr:.4f}"
             )
 
     for i, batch in enumerate(test_loader, 1):
@@ -209,7 +197,7 @@ def main(cfg: TrainConfig):
         )
         loss_ctr += 1
         n_acc += acc
-        print("batch {}: {:.2f}({:.2f})".format(i, n_acc / loss_ctr * 100, acc * 100))
+        print(f"batch {i}: {n_acc / loss_ctr * 100:.2f}({acc * 100:.2f})")
 
 
 if __name__ == "__main__":

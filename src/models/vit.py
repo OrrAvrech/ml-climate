@@ -1,14 +1,14 @@
 import torch
-from transformers import ViTModel, AutoImageProcessor
+from transformers import AutoImageProcessor, AutoModel
 
 
-class ViTPreTrained(torch.nn.Module):
+class BasePreTrained(torch.nn.Module):
     def __init__(self, name: str, device: torch.device):
         super().__init__()
         self.name = name
         self.device = device
         self.processor = AutoImageProcessor.from_pretrained(self.name)
-        self.model = ViTModel.from_pretrained(self.name).to(device)
+        self.model = AutoModel.from_pretrained(self.name).to(device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         inputs = self.processor(x, return_tensors="pt")
