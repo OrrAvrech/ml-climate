@@ -4,15 +4,14 @@ from typing import Optional
 
 import torch
 import torch.nn.functional as F
+from torch.autograd import Variable
 from torch.utils.data import DataLoader, Dataset
 
 import learn2learn as l2l
 from learn2learn.data.transforms import NWays, KShots, LoadData, RemapLabels
 from train_config import TrainConfig
 from data.datasets import OPTIMAL31
-from models.vit import BasePreTrained
-
-from transformers import ViTModel, AutoImageProcessor
+from models.base import BasePreTrained
 
 
 def pairwise_distances_logits(a, b):
@@ -42,6 +41,8 @@ def fast_adapt(model, batch, ways, shot, query_num, metric=None, device=None):
     labels = labels.squeeze(0)[sort.indices].squeeze(0)
 
     # Compute support and query embeddings
+    data = data.to(device)
+    labels = labels.to(device)
     embeddings = model(data)
     support_indices = np.zeros(data.size(0), dtype=bool)
     selection = np.arange(ways) * (shot + query_num)
@@ -133,6 +134,8 @@ def main(cfg: TrainConfig):
             optimizer, T_max=cfg.dataset.train_tasks, eta_min=cfg.training.min_lr
         )
 
+        best_val_loss = float("inf")
+        stop_counter = 0
         for epoch in range(1, cfg.training.epochs + 1):
             model.train()
 
@@ -154,13 +157,18 @@ def main(cfg: TrainConfig):
                 n_loss += loss.item()
                 n_acc += acc
 
+                if i % 10 == 0:
+                    print(f"epoch {epoch} - task {i}, train, loss={loss.item():.4f} acc={acc:.4f}")
+
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
             lr_scheduler.step()
 
+            train_loss = n_loss / loss_ctr
+            train_acc = n_acc / loss_ctr
             print(
-                f"epoch {epoch}, train, loss={n_loss / loss_ctr:.4f} acc={n_acc / loss_ctr:.4f}"
+                f"epoch {epoch}, train, loss={train_loss:.4f} acc={train_acc:.4f}"
             )
 
             model.eval()
@@ -181,9 +189,23 @@ def main(cfg: TrainConfig):
                 n_loss += loss.item()
                 n_acc += acc
 
+            val_loss = n_loss / loss_ctr
+            val_acc = n_acc / loss_ctr
             print(
-                f"epoch {epoch}, val, loss={n_loss / loss_ctr:.4f} acc={n_acc / loss_ctr:.4f}"
+                f"epoch {epoch}, val, loss={val_loss:.4f} acc={val_acc:.4f}"
             )
+
+            # Check for improvement in validation loss
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                stop_counter = 0  # Reset counter if there's improvement
+                save_path = cfg.training.saved_models_dir / "protonet.pt"
+                torch.save(model.state_dict(), save_path)
+            else:
+                stop_counter += 1
+                if stop_counter >= cfg.training.patience:
+                    print(f"Early stopping at epoch {epoch}. Validation loss did not improve.")
+                    break  # Stop training
 
     for i, batch in enumerate(test_loader, 1):
         loss, acc = fast_adapt(

@@ -28,6 +28,11 @@ class Training:
     batch_size: int
     lr: float
     min_lr: float
+    patience: int
+    saved_models_dir: Path
+
+    def __post_init__(self):
+        self.saved_models_dir.mkdir(exist_ok=True, parents=True)
 
 
 @dataclass

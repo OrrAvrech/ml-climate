@@ -13,7 +13,7 @@ class BasePreTrained(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         inputs = self.processor(x, return_tensors="pt")
         inputs = inputs.to(self.device)
-        with torch.no_grad():
-            outputs = self.model(**inputs)
+        outputs = self.model(**inputs)
         embedding = outputs.pooler_output
+        embedding = torch.reshape(embedding, (-1, embedding.shape[1]))
         return embedding

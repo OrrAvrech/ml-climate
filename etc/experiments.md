@@ -5,8 +5,9 @@ We used the convention of evaluating 5-way-1-shot (5w1s) and 5-way-5-shot (5w5s)
 
 ## Results
 
-| ID | Architecture | Pre-Train           | Meta-Train | OPTIMAL-31 (5w1s) | OPTIMAL-31 (5w1s) |
-|----|--------------|---------------------|------------|-------------------|-------------------|
-| 0  | ViT-base/16  | Sup. (ImageNet-21k) | -          | 69.36             | 90.37             |
-| 1  | ViT-base/16  | DINOv2              | -          |                   |                   |
-| 2  | ResNet-50    | Sup. (ImageNet-21k) | -          |                   |                   |
+| ID | Architecture   | Pre-Train           | Meta-Train | OPTIMAL-31 (5w1s) | OPTIMAL-31 (5w5s) |
+|----|----------------|---------------------|------------|-------------------|-------------------|
+| 0  | ViT-base/16    | Sup. (ImageNet-21k) | -          | 69.4              | 90.4              |
+| 1  | ViT-base/16    | DINOv2              | -          | 81.3              | 94.9              |
+| 2  | ResNet-50      | Sup. (ImageNet-21k) | -          | 70.5              | 92.6              |
+| 3  | ViT-base/16    | DINOv2              | ProtoNet   |                   |                   |

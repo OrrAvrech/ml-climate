@@ -27,3 +27,6 @@ class labels paired with remote sensing data.
 
 ### 12.1.2023
 - Started running experiments, currently without meta-training, only examining backbones and pre-training regimes on FS evaluation conventions. Refer to `etc/experiments.md`.
+
+### 12.3.2023
+- Run experiments on different pre-trained models. SSL (DinoV2) yields very good results compared to the same architecture with fully-supervised on ImageNet. 
