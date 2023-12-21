@@ -17,6 +17,9 @@ class labels paired with remote sensing data.
 - Implemented BaseImageDataset and initial ProtoNet training script.
 - Currently experimenting with these 3 datasets: [EuroSAT](https://arxiv.org/pdf/1709.00029.pdf), [UC Merced Land Use](https://faculty.ucmerced.edu/snewsam/papers/Yang_ACMGIS10_BagOfVisualWords.pdf), [fMoW](https://arxiv.org/pdf/1711.07846.pdf).
 
+### 11.20.2023
+- Read DINO + DINOv2 papers
+
 ### 11.29.2023
 - Implemented dataset splits according to the common Few-shot scheme.
 - Decided on using pre-trained models + K-NN on test and validation episodes at first. Second, fine-tune on meta-test only.
@@ -29,4 +32,7 @@ class labels paired with remote sensing data.
 - Started running experiments, currently without meta-training, only examining backbones and pre-training regimes on FS evaluation conventions. Refer to `etc/experiments.md`.
 
 ### 12.3.2023
-- Run experiments on different pre-trained models. SSL (DinoV2) yields very good results compared to the same architecture with fully-supervised on ImageNet. 
+- Ran experiments on different pre-trained models. SSL (DinoV2) yields very good results compared to the same architecture with fully-supervised on ImageNet.
+
+### 12.17.2023
+- Used [Scale-MAE](https://arxiv.org/pdf/2212.14532.pdf) as a pre-trained "foundation model" for satellite images. Results are underwhelming even after trying multiple tweaks. Perhaps some comments on how to reproduce features for each dataset (OPTIMAL-31 was evaluated in the paper) could have helped in obtaining better results.    

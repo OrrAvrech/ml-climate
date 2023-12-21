@@ -5,6 +5,13 @@ black
 learn2learn
 pyrallis
 transformers
+
+--extra-index-url https://download.pytorch.org/whl/cu118
 torch
 torchvision
 torchaudio
+
+# scale-mae
+shapely
+rasterio
+timm==0.3.2

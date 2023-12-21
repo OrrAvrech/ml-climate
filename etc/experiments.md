@@ -11,3 +11,5 @@ We used the convention of evaluating 5-way-1-shot (5w1s) and 5-way-5-shot (5w5s)
 | 1  | ViT-base/16    | DINOv2              | -          | 81.3              | 94.9              |
 | 2  | ResNet-50      | Sup. (ImageNet-21k) | -          | 70.5              | 92.6              |
 | 3  | ViT-base/16    | DINOv2              | ProtoNet   |                   |                   |
+| 4  | ViT-large/32   | ScaleMAE (fMoW)     | -          | 45.69             | 56.93             |
+
