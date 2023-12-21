@@ -5,30 +5,13 @@ from datetime import datetime
 
 import torch
 import torch.nn.functional as F
-import transformers.data.metrics.squad_metrics
 from torch.utils.data import DataLoader, Dataset
 
 import learn2learn as l2l
 from learn2learn.data.transforms import NWays, KShots, LoadData, RemapLabels
-from torchvision.transforms import Resize, ToTensor, Normalize
 from train_config import TrainConfig
 from data.datasets import OPTIMAL31
 from models.base import BasePreTrained
-from models.scale_mae import mae_vit_large_patch16
-
-
-class OPTIMAL_DATASET_STATS:
-    # Divided by 255
-    PIXEL_MEANS = [
-        0.3688422134901961,
-        0.3807842425882353,
-        0.3377770719607843,
-    ]  # [0.485, 0.456, 0.406] # imagenet
-    PIXEL_STD = [
-        0.20127227078431373,
-        0.1805812771764706,
-        0.1775864696862745,
-    ]  # [0.229, 0.224, 0.225]  # imagenet
 
 
 def pairwise_distances_logits(a, b):
@@ -60,21 +43,7 @@ def fast_adapt(model, batch, ways, shot, query_num, metric=None, device=None):
     # Compute support and query embeddings
     data = data.to(device)
     labels = labels.to(device)
-
-    eval_scale = 256
-    eval_res = 1.0
-
-    data = data.to(torch.float32)
-    data = Normalize(mean=OPTIMAL_DATASET_STATS.PIXEL_MEANS, std=OPTIMAL_DATASET_STATS.PIXEL_STD)(data)
-
-    data = torch.nn.functional.interpolate(
-        data, (eval_scale, eval_scale), mode="area"
-    )
-    input_res = torch.ones(len(data)).float().to(data.device) * eval_res
-
-    embeddings = model(data, knn_feats=True, input_res=input_res)
-    embeddings = torch.nn.functional.normalize(embeddings, dim=1)
-
+    embeddings = model(data)
     support_indices = np.zeros(data.size(0), dtype=bool)
     selection = np.arange(ways) * (shot + query_num)
     for offset in range(shot):
@@ -159,13 +128,7 @@ def main(cfg: TrainConfig):
         shuffle=False,
     )
 
-    # model = BasePreTrained(cfg.model.name, device=device)
-    weights_path = "./weights/scalemae-vitlarge-800.pth"
-    model = mae_vit_large_patch16(fixed_output_size=0, independent_fcn_head=True, fcn_dim=512,
-                                  fcn_layers=2, decoder_depth=3, absolute_scale=True)
-    state_dict = torch.load(weights_path)
-    model.load_state_dict(state_dict["model"])
-    model.to(device)
+    model = BasePreTrained(cfg.model.name, device=device)
 
     if cfg.model.train:
         optimizer = torch.optim.Adam(model.parameters(), lr=cfg.training.lr)
