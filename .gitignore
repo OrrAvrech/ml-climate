@@ -1,5 +1,6 @@
 # user
 *.pth
+*.pt
 
 # Byte-compiled / optimized / DLL files
 .idea
